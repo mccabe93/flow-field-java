@@ -28,19 +28,31 @@ public class Pathfinder {
 		this.currentY = currentY/NODE_SIZE;
 		System.out.println(this.goalX + ", " + this.goalY);
 		generateLocalizedCostGrid();
+		interpathAngle = (float) Math.atan2(currentY - goalY,currentX - goalX);
+		System.out.println("interpath angles: " + interpathAngle + "; cos: " + -Math.cos(interpathAngle) + "; sin: " + Math.sin(interpathAngle));
 	}
+	
+	/***
+	 * We can limit our search area by just using the unit circle
+	 * or some trig functions.
+	 * 
+	 * -1,-1	0,-1	1,-1
+	 * -1,0		0,0		1,0
+	 * -1,1		0,1		1,1
+	 * 
+	 */
 	
 	// generate cost grid 
 	private void generateLocalizedCostGrid() {
 		for(int i = 0; i < NUM_X_NODES; i++) {
 			for(int j = 0; j < NUM_Y_NODES; j++) {
 				localCostGrid[i][j] = envCostGrid[i][j] + Math.abs(i-goalX) + Math.abs(j-goalY);
-				System.out.print(localCostGrid[i][j] + "\t\t");
+//				System.out.print(localCostGrid[i][j] + "\t\t");
 			}
-			System.out.println();
+//			System.out.println();
 		}
 		localCostGrid[goalX][goalY] = 0;
-		System.out.println(goalX + ", " + goalY);
+//		System.out.println(goalX + ", " + goalY);
 	}
 	
 	public int[] moveAlongPath() {
@@ -55,7 +67,7 @@ public class Pathfinder {
 	private int[] findLeastNeighbor() {
 		int[] leastNeighbor = new int[2];
 		int leastNeighborValue = Integer.MAX_VALUE;
-		System.out.println("currentx,y: " + currentX + ","+currentY + ","+ localCostGrid[currentX][currentY]) ;
+//		System.out.println("currentx,y: " + currentX + ","+currentY + ","+ localCostGrid[currentX][currentY]) ;
 		for(int i = -1; i <= 1; i++) {
 			for(int j = -1; j <= 1; j++) {
 				int tmp = -1;
@@ -68,10 +80,11 @@ public class Pathfinder {
 						leastNeighbor = new int[]{currentX+i, currentY+j};
 					}
 				}
-				System.out.print((currentX + i) + "," + (currentY + j) + "," + tmp + " ");
+//				System.out.print((currentX + i) + "," + (currentY + j) + "," + tmp + " ");
 			}
-			System.out.println();
+//			System.out.println();
 		}
+		localCostGrid[leastNeighbor[0]][leastNeighbor[1]] += 100;
 		return leastNeighbor;
 	}
 	
