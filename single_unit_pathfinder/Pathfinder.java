@@ -3,9 +3,6 @@ package ffpf.git;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 
 public class Pathfinder {
 	public static float CELL_SIZE = 12f;
@@ -13,28 +10,18 @@ public class Pathfinder {
 	public static int[][] envCostGrid;						
 	public static int	NUM_X_NODES,
 						NUM_Y_NODES,
-						NODE_SIZE,
-						GUY_COST = 50;
+						NODE_SIZE;
 	
 	private int[][] localCostGrid = new int[NUM_X_NODES][NUM_Y_NODES];
 	
-	class User {
-		HashSet<String> visited = new HashSet<String>();
-		public int currentX, currentY, lastX = -10000, lastY = -10000;
-		public User(int currentX, int currentY) {
-			this.currentX = currentX/NODE_SIZE;
-			this.currentY = currentY/NODE_SIZE;
-		}
-		
-	}
+	int goalX, goalY, currentX, currentY;
 	
-	private HashMap<Integer, User> users = new HashMap<Integer, User>();
-	
-	int goalX, goalY;
-	
-	public Pathfinder(int goalX, int goalY) {
+	public Pathfinder(int currentX, int currentY, int goalX, int goalY) {
 		this.goalX = goalX/NODE_SIZE;
 		this.goalY = goalY/NODE_SIZE;
+		this.currentX = currentX/NODE_SIZE;
+		this.currentY = currentY/NODE_SIZE;
+		System.out.println(this.goalX + ", " + this.goalY);
 		generateLocalizedCostGrid();
 	}
 	
@@ -61,68 +48,36 @@ public class Pathfinder {
 //		System.out.println(goalX + ", " + goalY);
 	}
 	
-	public void moveAlongPath() {
-		for(User u : users.values()) {
-			Point newLocation = findLeastNeighbor(u);
-			
-			if(u.lastX != -10000 && u.lastY != -10000)
-				localCostGrid[u.lastX][u.lastY] -= GUY_COST;
-				
-			u.lastX = u.currentX;
-			u.lastY = u.currentY;
-			
-			u.currentX = newLocation.x;
-			u.currentY = newLocation.y;
-			
-			String s = u.currentX + "" + u.currentY;
-			u.visited.add(s);
-			System.out.println(u.visited.size());
-			
-			localCostGrid[u.currentX][u.currentY] += GUY_COST;
-		}
+	public int[] moveAlongPath() {
+		int[] newLocation = findLeastNeighbor();
+		currentX = newLocation[0];
+		currentY = newLocation[1];
+		newLocation[0] *= NODE_SIZE;
+		newLocation[1] *= NODE_SIZE;
+		return newLocation;
 	}
 	
-	public void addUser(int x, int y, int id) {
-		User user = new User(x, y);
-		users.put(id, user);
-	}
-	
-	public Point getLocation(int id) {
-		User u = users.get(Integer.valueOf(id));
-		if(u == null)
-			return null;
-		return new Point(u.currentX * NODE_SIZE, u.currentY * NODE_SIZE);
-	}
-	
-	private Point findLeastNeighbor(User user) {
-		Point leastNeighbor = new Point(user.currentX, user.currentY);
-		
-		int currentX = user.currentX,
-				currentY = user.currentY;
-		
+	private int[] findLeastNeighbor() {
+		int[] leastNeighbor = new int[2];
 		int leastNeighborValue = Integer.MAX_VALUE;
 //		System.out.println("currentx,y: " + currentX + ","+currentY + ","+ localCostGrid[currentX][currentY]) ;
 		for(int i = -1; i <= 1; i++) {
 			for(int j = -1; j <= 1; j++) {
 				int tmp = -1;
-				Point dest = new Point(currentX+i, currentY+j);
-				String s = dest.x + "" + dest.y;
-				boolean hasVisitied = user.visited.contains(s);
-				System.out.println(hasVisitied);
-				if(dest.x < localCostGrid.length && dest.y < localCostGrid[0].length
-						&& dest.x > 0 && dest.y > 0 && 
-						!hasVisitied &&
+				if(currentX+i < localCostGrid.length && currentY+j < localCostGrid[0].length
+						&& currentX+i > 0 && currentY+j > 0 &&
 						i+j != 0) {
-					tmp = localCostGrid[dest.x][dest.y];
+					tmp = localCostGrid[currentX+i][currentY+j];
 					if(tmp <= leastNeighborValue) {
 						leastNeighborValue = tmp;
-						leastNeighbor = new Point(dest.x, dest.y);
+						leastNeighbor = new int[]{currentX+i, currentY+j};
 					}
 				}
 //				System.out.print((currentX + i) + "," + (currentY + j) + "," + tmp + " ");
 			}
 //			System.out.println();
 		}
+		localCostGrid[leastNeighbor[0]][leastNeighbor[1]] += 100;
 		return leastNeighbor;
 	}
 	

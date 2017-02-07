@@ -35,9 +35,7 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	
 	List<Obstacle> obstacles = new ArrayList<Obstacle>();
 //	List<Obstacle> guys = new ArrayList<Obstacle>();
-	int lastId = 0;
-	
-	int[] guys;
+	Obstacle theGuy = new Obstacle(10, 10, 8, 8, 50);
 	
 	Pathfinder currentPathfinder = null; 
 	
@@ -61,15 +59,8 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 		generateEnvironmentCostGrid();
 		Pathfinder.envCostGrid = envCostGrid.clone();
 		Pathfinder.NODE_SIZE = NODE_SIZE;
-		
-		guys = new int[10];
-		
-		for(int i = 0; i < 10; i++) {
-			Obstacle newGuy = new Obstacle(rng.nextInt(WORLD_WIDTH), rng.nextInt(WORLD_HEIGHT), 8, 8, lastId++, 50);
-			newGuy.color = new Color(rng.nextInt(255), rng.nextInt(255), rng.nextInt(255));
-			guys[i] = newGuy.id;
-			obstacles.add(newGuy);
-		}
+		theGuy.setColor(Color.green);
+		obstacles.add(theGuy);
 	}
 	
 	public Scene(int seed) {
@@ -85,7 +76,7 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 			int randH = rng.nextInt(OBSTACLE_MAX_HEIGHT) + OBSTACLE_MIN_HEIGHT;
 			int randX = rng.nextInt(WORLD_WIDTH-OBSTACLE_MAX_WIDTH) + OBSTACLE_MAX_WIDTH;
 			int randY = rng.nextInt(WORLD_HEIGHT-OBSTACLE_MAX_HEIGHT) + OBSTACLE_MAX_HEIGHT;
-			obstacles.add(new Obstacle(randX, randY, randW, randH, lastId++, 10000));
+			obstacles.add(new Obstacle(randX, randY, randW, randH, rng.nextInt(15000)+10000));
 		}
 	}
 	
@@ -131,8 +122,7 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 			}
 			painted = true;
 		}
-		*/
-		/*
+		
 		if(currentPathfinder != null) {
 			currentPathfinder.paint(g);
 			painted = true;
@@ -149,17 +139,10 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 		if(arg0.getKeyCode() == KeyEvent.VK_ESCAPE)
 			System.exit(0);
 		if(arg0.getKeyCode() == KeyEvent.VK_SPACE) {
-			if(guys != null) {
-				currentPathfinder.moveAlongPath();
-				//System.out.println(guys.length);
-				for(int g : guys) {
-					Point pos = currentPathfinder.getLocation(g);
-					//System.out.println(pos);
-					obstacles.get(g).x = pos.x;
-					obstacles.get(g).y = pos.y;
-				}
-				repaint();
-			}
+			int[] newLoc = currentPathfinder.moveAlongPath();
+			theGuy.x = newLoc[0];
+			theGuy.y = newLoc[1];
+			repaint();
 		}
 		
 	}
@@ -178,11 +161,7 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		currentPathfinder = new Pathfinder(arg0.getX(), arg0.getY());
-		for(int g : guys) {
-			Obstacle guy = obstacles.get(g);
-			currentPathfinder.addUser(guy.x, guy.y, g);
-		}
+		currentPathfinder = new Pathfinder(theGuy.x, theGuy.y, arg0.getX(), arg0.getY());
 		repaint();
 	}
 
