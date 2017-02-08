@@ -16,16 +16,18 @@ public class Pathfinder {
 						NODE_SIZE,
 						GUY_COST = 50;
 	
+	private int userCount = 0;
+	
 	private int[][] localCostGrid = new int[NUM_X_NODES][NUM_Y_NODES];
+	HashMap<Point, Integer> changeList = new HashMap<Point, Integer>();
 	
 	class User {
-		HashSet<String> visited = new HashSet<String>();
+		HashSet<Integer> visited = new HashSet<Integer>();
 		public int currentX, currentY, lastX = -10000, lastY = -10000;
 		public User(int currentX, int currentY) {
 			this.currentX = currentX/NODE_SIZE;
 			this.currentY = currentY/NODE_SIZE;
 		}
-		
 	}
 	
 	private HashMap<Integer, User> users = new HashMap<Integer, User>();
@@ -36,6 +38,19 @@ public class Pathfinder {
 		this.goalX = goalX/NODE_SIZE;
 		this.goalY = goalY/NODE_SIZE;
 		generateLocalizedCostGrid();
+	}
+	
+	public void loadChangeList(HashMap<Point, Integer> list) {
+		for(Point p : list.keySet()) {
+			localCostGrid[p.x][p.y] += list.get(p);
+		}
+	}
+	
+	public HashMap<Point, Integer> getChangeList() {
+		HashMap<Point, Integer> oldChangeList = new HashMap<Point, Integer>(changeList);
+		oldChangeList.putAll(changeList);
+		changeList.clear();
+		return oldChangeList;
 	}
 	
 	/***
@@ -65,8 +80,10 @@ public class Pathfinder {
 		for(User u : users.values()) {
 			Point newLocation = findLeastNeighbor(u);
 			
-			if(u.lastX != -10000 && u.lastY != -10000)
+			if(u.lastX != -10000 && u.lastY != -10000) {
 				localCostGrid[u.lastX][u.lastY] -= GUY_COST;
+				changeList.put(new Point(u.lastX, u.lastY), localCostGrid[u.lastX][u.lastY]);
+			}
 				
 			u.lastX = u.currentX;
 			u.lastY = u.currentY;
@@ -74,17 +91,28 @@ public class Pathfinder {
 			u.currentX = newLocation.x;
 			u.currentY = newLocation.y;
 			
-			String s = u.currentX + "" + u.currentY;
-			u.visited.add(s);
+			u.visited.add(newLocation.getHash());
 			System.out.println(u.visited.size());
 			
 			localCostGrid[u.currentX][u.currentY] += GUY_COST;
+			
+			changeList.put(newLocation, localCostGrid[u.currentX][u.currentY]);
+			
+			if(Math.abs(u.currentX - goalX) < 3 && Math.abs(u.currentY - goalY) < 3) {
+				users.remove(u);
+				userCount--;
+			}
 		}
 	}
 	
 	public void addUser(int x, int y, int id) {
 		User user = new User(x, y);
 		users.put(id, user);
+		userCount++;
+	}
+	
+	public int getUserCount() {
+		return userCount;
 	}
 	
 	public Point getLocation(int id) {
@@ -106,9 +134,7 @@ public class Pathfinder {
 			for(int j = -1; j <= 1; j++) {
 				int tmp = -1;
 				Point dest = new Point(currentX+i, currentY+j);
-				String s = dest.x + "" + dest.y;
-				boolean hasVisitied = user.visited.contains(s);
-				System.out.println(hasVisitied);
+				boolean hasVisitied = user.visited.contains(dest.getHash());
 				if(dest.x < localCostGrid.length && dest.y < localCostGrid[0].length
 						&& dest.x > 0 && dest.y > 0 && 
 						!hasVisitied &&

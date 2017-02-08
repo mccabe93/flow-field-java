@@ -3,6 +3,7 @@ package ffpf.git;
 import java.awt.Color;
 import java.awt.Frame;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -38,6 +39,9 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	int lastId = 0;
 	
 	int[] guys;
+	
+	List<Pathfinder> pathfinders = new ArrayList<Pathfinder>();
+	HashMap<Point, Integer> globalHashMap = new HashMap<Point, Integer>();
 	
 	Pathfinder currentPathfinder = null; 
 	
@@ -110,10 +114,31 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 		
 	}
 	
+	public void getGlobalHashMap() {
+		for(Pathfinder p : pathfinders) {
+			HashMap<Point, Integer> tmp = p.getChangeList();
+			for(Point k : tmp.keySet()) {
+				if(globalHashMap.containsKey(k)) {
+					globalHashMap.replace(k, globalHashMap.get(k) + tmp.get(k));
+				}
+				else {
+					globalHashMap.put(k, tmp.get(k));
+				}
+			}
+		}
+	}
+	
+	public void updateLocalHashMaps() {
+		for(Pathfinder p : pathfinders) {
+			p.loadChangeList(globalHashMap);
+		}
+		globalHashMap.clear();
+	}
+	
 	public void update() {
 		
 	}
-	boolean painted = false;
+	
 	public void paint(Graphics g)
 	{
 		/*
@@ -150,14 +175,17 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 			System.exit(0);
 		if(arg0.getKeyCode() == KeyEvent.VK_SPACE) {
 			if(guys != null) {
-				currentPathfinder.moveAlongPath();
+				pathfinders.get(pathfinders.size()-1).moveAlongPath();
 				//System.out.println(guys.length);
 				for(int g : guys) {
-					Point pos = currentPathfinder.getLocation(g);
+					Point pos = pathfinders.get(0).getLocation(g);
 					//System.out.println(pos);
 					obstacles.get(g).x = pos.x;
 					obstacles.get(g).y = pos.y;
 				}
+				getGlobalHashMap();
+				System.out.println(globalHashMap.size());
+				updateLocalHashMaps();
 				repaint();
 			}
 		}
@@ -178,11 +206,12 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		currentPathfinder = new Pathfinder(arg0.getX(), arg0.getY());
+		Pathfinder tmp = new Pathfinder(arg0.getX(), arg0.getY());
 		for(int g : guys) {
 			Obstacle guy = obstacles.get(g);
-			currentPathfinder.addUser(guy.x, guy.y, g);
+			tmp.addUser(guy.x, guy.y, g);
 		}
+		pathfinders.add(tmp);
 		repaint();
 	}
 
