@@ -19,14 +19,17 @@ public class Pathfinder {
 	private int userCount = 0;
 	
 	private int[][] localCostGrid = new int[NUM_X_NODES][NUM_Y_NODES];
+	private int[][] baseLocalCostGrid = new int[NUM_X_NODES][NUM_Y_NODES];
 	HashMap<Point, Integer> changeList = new HashMap<Point, Integer>();
 	
 	class User {
 		HashSet<Integer> visited = new HashSet<Integer>();
-		public int currentX, currentY, lastX = -10000, lastY = -10000;
+		public int currentX, currentY, lastX, lastY;
 		public User(int currentX, int currentY) {
 			this.currentX = currentX/NODE_SIZE;
 			this.currentY = currentY/NODE_SIZE;
+			this.lastX = currentX/NODE_SIZE;
+			this.lastY = currentY/NODE_SIZE;
 		}
 	}
 	
@@ -40,9 +43,16 @@ public class Pathfinder {
 		generateLocalizedCostGrid();
 	}
 	
-	public void loadChangeList(HashMap<Point, Integer> list) {
-		for(Point p : list.keySet()) {
-			localCostGrid[p.x][p.y] += list.get(p);
+	public void loadChangeList(int[][] changeArray) {
+		//for(Point p : list.keySet()) {
+		//	localCostGrid[p.x][p.y] += list.get(p);
+		//}
+		for(int i = 0; i < changeArray.length; i++) {
+			for(int j = 0; j < changeArray[0].length; j++) {
+				localCostGrid[i][j] = baseLocalCostGrid[i][j] + changeArray[i][j];
+			//	System.out.print(changeArray[i][j] + " ");
+			}
+//			System.out.println();
 		}
 	}
 	
@@ -53,21 +63,12 @@ public class Pathfinder {
 		return oldChangeList;
 	}
 	
-	/***
-	 * We can limit our search area by just using the unit circle
-	 * or some trig functions.
-	 * 
-	 * -1,-1	0,-1	1,-1
-	 * -1,0		0,0		1,0
-	 * -1,1		0,1		1,1
-	 * 
-	 */
-	
 	// generate cost grid 
 	private void generateLocalizedCostGrid() {
 		for(int i = 0; i < NUM_X_NODES; i++) {
 			for(int j = 0; j < NUM_Y_NODES; j++) {
 				localCostGrid[i][j] = envCostGrid[i][j] + Math.abs(i-goalX) + Math.abs(j-goalY);
+				baseLocalCostGrid[i][j] = localCostGrid[i][j];
 //				System.out.print(localCostGrid[i][j] + "\t\t");
 			}
 //			System.out.println();
@@ -76,32 +77,36 @@ public class Pathfinder {
 //		System.out.println(goalX + ", " + goalY);
 	}
 	
-	public void moveAlongPath() {
-		for(User u : users.values()) {
-			Point newLocation = findLeastNeighbor(u);
-			
-			if(u.lastX != -10000 && u.lastY != -10000) {
-				localCostGrid[u.lastX][u.lastY] -= GUY_COST;
-				changeList.put(new Point(u.lastX, u.lastY), localCostGrid[u.lastX][u.lastY]);
-			}
-				
-			u.lastX = u.currentX;
-			u.lastY = u.currentY;
-			
-			u.currentX = newLocation.x;
-			u.currentY = newLocation.y;
-			
-			u.visited.add(newLocation.getHash());
-			System.out.println(u.visited.size());
-			
-			localCostGrid[u.currentX][u.currentY] += GUY_COST;
-			
-			changeList.put(newLocation, localCostGrid[u.currentX][u.currentY]);
-			
-			if(Math.abs(u.currentX - goalX) < 3 && Math.abs(u.currentY - goalY) < 3) {
-				users.remove(u);
-				userCount--;
-			}
+	public void moveAlongPath(int id) {
+		User u = users.get(id);
+		if(u == null)
+			return;
+		Point newLocation = findLeastNeighbor(u);
+		
+		u.lastX = u.currentX;
+		u.lastY = u.currentY;
+		
+		u.currentX = newLocation.x;
+		u.currentY = newLocation.y;
+		
+		u.visited.add(newLocation.getHash());
+		
+		int distX = Math.abs(u.currentX - goalX);	
+		int distY = Math.abs(u.currentY - goalY);
+		
+		if(distX < 3 && distY < 3) {
+			users.remove(id);
+			userCount--;
+		}
+		else {
+			changeList.put(new Point(u.lastX, u.lastY), -GUY_COST);
+			changeList.put(new Point(u.currentX, u.currentY), GUY_COST);
+		}
+	}
+	
+	public void moveAllAlongPath() {
+		for(Integer id : users.keySet()) {
+			moveAlongPath(id);
 		}
 	}
 	

@@ -4,8 +4,9 @@ import java.awt.Color;
 import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.awt.Font;
+import java.util.Map.Entry;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
@@ -14,7 +15,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Random;
 
-public class Scene extends Frame implements KeyListener, MouseListener {	
+import javax.swing.JPanel;
+
+public class Scene extends JPanel implements KeyListener, MouseListener {	
 
 	public static int WORLD_WIDTH			= 640,
 						WORLD_HEIGHT		= 640,
@@ -41,13 +44,30 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	int[] guys;
 	
 	List<Pathfinder> pathfinders = new ArrayList<Pathfinder>();
+	
 	HashMap<Point, Integer> globalHashMap = new HashMap<Point, Integer>();
+	HashSet<Integer> ghmPoints = new HashSet<Integer>();
+	
+	HashSet<Guy> theGuys = new HashSet<Guy>();
 	
 	Pathfinder currentPathfinder = null; 
+	
+	public class Guy {
+		public Obstacle guy;
+		public Pathfinder currentPath;
+		public Guy(Obstacle guy, Pathfinder currentPath) {
+			this.guy = guy;
+			this.currentPath = currentPath;
+		}
+	}
 	
 	Random rng;
 	
 	int[][] envCostGrid = new int[numXNodes][numYNodes];
+	
+	int[][] changeArray = new int[numXNodes][numYNodes];
+
+	private boolean drawPathfinderHeatmap = false;
 	
 	public Scene() {
 		Pathfinder.NUM_X_NODES = numXNodes;
@@ -58,7 +78,7 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 		setLayout(null);
 		setSize(WINDOW_WIDTH,WINDOW_HEIGHT);
 		setBackground(Color.gray);
-		setResizable(false);
+//		setResizable(false);
 		setVisible(true);
 		rng = new Random();
 		generateRandomObstacles();
@@ -71,7 +91,8 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 		for(int i = 0; i < 10; i++) {
 			Obstacle newGuy = new Obstacle(rng.nextInt(WORLD_WIDTH), rng.nextInt(WORLD_HEIGHT), 8, 8, lastId++, 50);
 			newGuy.color = new Color(rng.nextInt(255), rng.nextInt(255), rng.nextInt(255));
-			guys[i] = newGuy.id;
+			guys[i] = newGuy.id; 
+			theGuys.add(new Guy(newGuy, null));
 			obstacles.add(newGuy);
 		}
 	}
@@ -94,7 +115,6 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	}
 	
 	private void generateEnvironmentCostGrid() {
-		int costNodes = 0;
 		for(int i = 0; i < numXNodes; i++) {
 			for(int j = 0; j < numYNodes; j++) {
 				for(Obstacle o : obstacles){
@@ -103,7 +123,6 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 					Rectangle intersection = rect1.intersection(rect2);
 					if(!intersection.isEmpty()) {
 						envCostGrid[i][j] = o.cost;
-						costNodes++;
 					}
 				}
 //				System.out.print(envCostGrid[i][j] + " ");
@@ -117,29 +136,24 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	public void getGlobalHashMap() {
 		for(Pathfinder p : pathfinders) {
 			HashMap<Point, Integer> tmp = p.getChangeList();
-			for(Point k : tmp.keySet()) {
-				if(globalHashMap.containsKey(k)) {
-					globalHashMap.replace(k, globalHashMap.get(k) + tmp.get(k));
-				}
-				else {
-					globalHashMap.put(k, tmp.get(k));
-				}
+			for(Entry<Point, Integer> entry : tmp.entrySet()) {
+				Point k = entry.getKey();
+				changeArray[k.x][k.y] += entry.getValue();
 			}
 		}
 	}
 	
 	public void updateLocalHashMaps() {
 		for(Pathfinder p : pathfinders) {
-			p.loadChangeList(globalHashMap);
+			p.loadChangeList(changeArray);
 		}
-		globalHashMap.clear();
 	}
 	
 	public void update() {
 		
 	}
 	
-	public void paint(Graphics g)
+	public void paintComponent(Graphics g)
 	{
 		/*
 		if(envCostGrid != null) {
@@ -157,12 +171,13 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 			painted = true;
 		}
 		*/
-		/*
-		if(currentPathfinder != null) {
-			currentPathfinder.paint(g);
-			painted = true;
+		if(drawPathfinderHeatmap ) {
+			if(pathfinders.size() > 0) {
+				Pathfinder currentPathFinder = pathfinders.get(pathfinders.size()-1);
+				if(currentPathFinder != null)
+					currentPathFinder.paint(g);
+			}
 		}
-		*/
 		
 		for(Obstacle o:obstacles)
 			o.paint(g);
@@ -175,21 +190,27 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 			System.exit(0);
 		if(arg0.getKeyCode() == KeyEvent.VK_SPACE) {
 			if(guys != null) {
-				pathfinders.get(pathfinders.size()-1).moveAlongPath();
 				//System.out.println(guys.length);
-				for(int g : guys) {
-					Point pos = pathfinders.get(0).getLocation(g);
-					//System.out.println(pos);
-					obstacles.get(g).x = pos.x;
-					obstacles.get(g).y = pos.y;
+				for(Guy g : theGuys) {
+					if(g.currentPath != null) {
+						g.currentPath.moveAlongPath(g.guy.id);
+						Point pos = g.currentPath.getLocation(g.guy.id);
+						//System.out.println(pos);
+						if(pos != null) {
+							g.guy.x = pos.x;
+							g.guy.y = pos.y;
+						}
+					}
+					getGlobalHashMap();
+					updateLocalHashMaps();
 				}
-				getGlobalHashMap();
-				System.out.println(globalHashMap.size());
-				updateLocalHashMaps();
 				repaint();
 			}
 		}
-		
+		if(arg0.getKeyCode() == KeyEvent.VK_G) {
+			drawPathfinderHeatmap = !drawPathfinderHeatmap;
+			repaint();
+		}
 	}
 
 	@Override
@@ -207,9 +228,9 @@ public class Scene extends Frame implements KeyListener, MouseListener {
 	public void mouseClicked(MouseEvent arg0) {
 		// TODO Auto-generated method stub
 		Pathfinder tmp = new Pathfinder(arg0.getX(), arg0.getY());
-		for(int g : guys) {
-			Obstacle guy = obstacles.get(g);
-			tmp.addUser(guy.x, guy.y, g);
+		for(Guy g : theGuys) {
+			tmp.addUser(g.guy.x, g.guy.y, g.guy.id);
+			g.currentPath = tmp;
 		}
 		pathfinders.add(tmp);
 		repaint();
