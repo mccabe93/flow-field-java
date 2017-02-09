@@ -17,7 +17,7 @@ import java.util.Random;
 
 import javax.swing.JPanel;
 
-public class Scene extends JPanel implements KeyListener, MouseListener {	
+public class Scene extends Frame implements KeyListener, MouseListener {	
 
 	public static int WORLD_WIDTH			= 640,
 						WORLD_HEIGHT		= 640,
@@ -153,7 +153,7 @@ public class Scene extends JPanel implements KeyListener, MouseListener {
 		
 	}
 	
-	public void paintComponent(Graphics g)
+	public void paint(Graphics g)
 	{
 		/*
 		if(envCostGrid != null) {
